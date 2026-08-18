@@ -1,195 +1,406 @@
-// Data Default (Digunakan jika localStorage masih kosong)
-const defaultTasks = [
-    { id: "PRJ-001", name: "Pekerjaan Persiapan & Pembersihan Lahan", pic: "Ahmad Fauzi", start: "2026-03-01", end: "2026-03-05", progress: 100, status: "Selesai", desc: "Area bersih dan siap" },
-    { id: "PRJ-002", name: "Pekerjaan Galian Tanah & Pondasi", pic: "Budi Santoso", start: "2026-03-06", end: "2026-03-15", progress: 100, status: "Selesai", desc: "Pondasi utama selesai" },
-    { id: "PRJ-003", name: "Pemasangan Struktur Beton Bertulang", pic: "Ahmad Fauzi", start: "2026-03-16", end: "2026-04-05", progress: 75, status: "Belum Selesai", desc: "Lantai 1 dan 2 terpasang" },
-    { id: "PRJ-004", name: "Pemasangan Dinding Bata & Plesteran", pic: "Dewi Lestari", start: "2026-04-01", end: "2026-04-20", progress: 40, status: "Belum Selesai", desc: "Proses pengerjaan sayap timur" },
-    { id: "PRJ-005", name: "Instalasi Rangka Atap & Genteng", pic: "Joko Widodo", start: "2026-04-21", end: "2026-05-05", progress: 0, status: "Belum Selesai", desc: "Menunggu material tiba" }
-];
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Itqan - Daftar Periksa Pekerjaan Konstruksi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkslate: '#0f172a',
+                        carddark: '#1e293b',
+                        borderdark: '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- SortableJS untuk Drag & Drop Urutan Baris -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-darkslate text-slate-100 font-sans min-h-screen flex flex-col">
 
-// Mengambil data dari localStorage, jika tidak ada gunakan defaultTasks
-let tasks = JSON.parse(localStorage.getItem("itqan_tasks")) || defaultTasks;
-
-// Fungsi bantuan untuk menyimpan array tasks ke localStorage
-function saveToLocalStorage() {
-    localStorage.setItem("itqan_tasks", JSON.stringify(tasks));
-}
-
-function renderTasks(dataToRender = tasks) {
-    const tbody = document.getElementById("taskTableBody");
-    tbody.innerHTML = "";
-
-    let total = dataToRender.length;
-    let doneCount = 0;
-    let progressSum = 0;
-
-    dataToRender.forEach((task, index) => {
-        if (task.status === "Selesai") doneCount++;
-        progressSum += Number(task.progress);
-
-        // Warna Baris: Hijau jika Selesai, Kuning jika Belum Selesai
-        let rowBgClass = task.status === "Selesai" ? "bg-emerald-950/40 hover:bg-emerald-900/40 border-l-4 border-emerald-500" : "bg-amber-950/30 hover:bg-amber-900/30 border-l-4 border-amber-400";
-        let badgeClass = task.status === "Selesai" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30";
-
-        let tr = document.createElement("tr");
-        tr.className = `${rowBgClass} transition duration-150`;
-        tr.innerHTML = `
-            <td class="p-3 text-center cursor-grab text-slate-400 hover:text-white"><i class="fa-solid fa-grip-vertical"></i></td>
-            <td class="p-3 font-mono text-xs text-slate-300">${task.id}</td>
-            <td class="p-3 font-medium text-white">${task.name}</td>
-            <td class="p-3 text-slate-300">${task.pic}</td>
-            <td class="p-3 text-center text-xs text-slate-400">${task.start}</td>
-            <td class="p-3 text-center text-xs text-slate-400">${task.end}</td>
-            <td class="p-3 text-center font-semibold text-slate-200">${task.progress}%</td>
-            <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${task.status}</span></td>
-            <td class="p-3 text-xs text-slate-400">${task.desc}</td>
-            <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-2">
-                    <button onclick="editTask(${index})" class="text-sky-400 hover:text-sky-300 p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button onclick="deleteTask(${index})" class="text-rose-400 hover:text-rose-300 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+    <!-- Header / Navbar -->
+    <header class="bg-carddark border-b border-borderdark sticky top-0 z-50 px-4 py-3 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500 text-darkslate p-2 rounded-lg font-bold text-lg flex items-center justify-center">
+                    <i class="fa-solid fa-helmet-safety"></i>
                 </div>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide text-white">ITQAN <span class="text-amber-400 text-sm font-normal">| Daftar Periksa Konstruksi</span></h1>
+                    <p class="text-xs text-slate-400">Sistem Pemantauan Proyek & Kolaborasi Real-Time</p>
+                </div>
+            </div>
+            
+            <!-- Tombol Aksi Utama -->
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i> Impor Excel
+                    <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden" onchange="importExcel(event)">
+                </label>
+                <button onclick="exportToGoogleSheets()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-arrow-up"></i> Export Sheets
+                </button>
+                <button onclick="syncToGoogleCalendar()" class="bg-sky-700 hover:bg-sky-600 text-white px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-days"></i> Kalender
+                </button>
+                <button onclick="openShareModal()" class="bg-amber-600 hover:bg-amber-500 text-darkslate font-semibold px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-share-nodes"></i> Bagikan Tautan
+                </button>
+            </div>
+        </div>
+    </header>
 
-    // Update Statistik Dashboard
-    document.getElementById("statTotal").innerText = total;
-    document.getElementById("statDone").innerText = doneCount;
-    document.getElementById("statPending").innerText = total - doneCount;
-    let avg = total > 0 ? Math.round(progressSum / total) : 0;
-    document.getElementById("statProgress").innerText = avg + "%";
-}
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
 
-// Inisialisasi Drag & Drop (Geser Urutan)
-document.addEventListener("DOMContentLoaded", () => {
-    renderTasks();
-    const el = document.getElementById("taskTableBody");
-    Sortable.create(el, {
-        handle: '.fa-grip-vertical',
-        animation: 150,
-        onEnd: function (evt) {
-            const movedItem = tasks.splice(evt.oldIndex, 1)[0];
-            tasks.splice(evt.newIndex, 0, movedItem);
-            saveToLocalStorage(); // Simpan urutan baru ke localStorage
+        <!-- Dashboard Ringkasan & Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-carddark border border-borderdark p-4 rounded-xl shadow">
+                <div class="text-slate-400 text-xs uppercase font-semibold">Total Pekerjaan</div>
+                <div id="statTotal" class="text-2xl font-bold text-white mt-1">0</div>
+            </div>
+            <div class="bg-carddark border border-borderdark p-4 rounded-xl shadow">
+                <div class="text-slate-400 text-xs uppercase font-semibold">Pekerjaan Selesai (Hijau)</div>
+                <div id="statDone" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+            </div>
+            <div class="bg-carddark border border-borderdark p-4 rounded-xl shadow">
+                <div class="text-slate-400 text-xs uppercase font-semibold">Belum Selesai (Kuning)</div>
+                <div id="statPending" class="text-2xl font-bold text-amber-400 mt-1">0</div>
+            </div>
+            <div class="bg-carddark border border-borderdark p-4 rounded-xl shadow">
+                <div class="text-slate-400 text-xs uppercase font-semibold">Rata-rata Kemajuan</div>
+                <div id="statProgress" class="text-2xl font-bold text-sky-400 mt-1">0%</div>
+            </div>
+        </div>
+
+        <!-- Kontrol Pencarian & Input Manual -->
+        <div class="bg-carddark border border-borderdark p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="relative w-full md:w-96">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="searchInput" onkeyup="filterTasks()" placeholder="Cari pekerjaan atau PIC..." class="w-full bg-darkslate border border-borderdark rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <span class="text-xs text-slate-400 hidden sm:inline"><i class="fa-solid fa-arrows-up-down"></i> Geser baris untuk ubah urutan</span>
+                <button onclick="openAddModal()" class="bg-amber-500 hover:bg-amber-400 text-darkslate font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Tambah Pekerjaan
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabel Daftar Pekerjaan -->
+        <div class="bg-carddark border border-borderdark rounded-xl shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-[#111827] text-slate-300 uppercase text-xs border-b border-borderdark">
+                        <tr>
+                            <th class="p-3 text-center w-12"><i class="fa-solid fa-grip-vertical"></i></th>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Nama Pekerjaan / Item</th>
+                            <th class="p-3">PIC</th>
+                            <th class="p-3 text-center">Mulai</th>
+                            <th class="p-3 text-center">Target Selesai</th>
+                            <th class="p-3 text-center">Kemajuan (%)</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3">Keterangan</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTableBody" class="divide-y divide-borderdark">
+                        <!-- Baris Data Dimuat Dinamis via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Tambah/Edit Pekerjaan -->
+    <div id="taskModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-carddark border border-borderdark rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-borderdark pb-3">
+                <h3 id="modalTitle" class="text-lg font-bold text-white">Tambah Pekerjaan Baru</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="taskForm" onsubmit="saveTask(event)" class="space-y-3">
+                <input type="hidden" id="taskIndex">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">ID Pekerjaan</label>
+                        <input type="text" id="taskId" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none" placeholder="PRJ-011">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">PIC (Penanggung Jawab)</label>
+                        <input type="text" id="taskPic" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none" placeholder="Nama PIC">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Nama Pekerjaan / Item</label>
+                    <input type="text" id="taskName" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none" placeholder="Deskripsi pekerjaan...">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Tanggal Mulai</label>
+                        <input type="date" id="taskStart" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Tanggal Target Selesai</label>
+                        <input type="date" id="taskEnd" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Kemajuan (0 - 100 %)</label>
+                        <input type="number" id="taskProgress" min="0" max="100" value="0" oninput="autoSetStatus()" required class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Status (Otomatis)</label>
+                        <select id="taskStatus" class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+                            <option value="Belum Selesai">Belum Selesai</option>
+                            <option value="Selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Keterangan</label>
+                    <textarea id="taskDesc" rows="2" class="w-full bg-darkslate border border-borderdark rounded p-2 text-sm text-white focus:border-amber-500 focus:outline-none" placeholder="Catatan tambahan..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-borderdark">
+                    <button type="button" onclick="closeModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition">Batal</button>
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-darkslate font-bold px-4 py-2 rounded text-sm transition">Simpan Pekerjaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Berbagi Tautan -->
+    <div id="shareModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-carddark border border-borderdark rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-borderdark pb-3">
+                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-share-nodes text-amber-400"></i> Berbagi Akses Kolaborasi</h3>
+                <button onclick="closeShareModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Tautan Kolaborasi Tim (Akses Edit Real-Time)</label>
+                    <div class="flex gap-2">
+                        <input type="text" readonly value="https://itqan-app.web.app/collab?room=proyek-konstruksi-01" class="w-full bg-darkslate border border-borderdark rounded p-2 text-xs text-slate-300">
+                        <button onclick="alert('Tautan disalin ke clipboard!')" class="bg-amber-500 text-darkslate px-3 py-2 rounded text-xs font-bold hover:bg-amber-400">Salin</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Tautan Khusus Lihat Saja (View-Only)</label>
+                    <div class="flex gap-2">
+                        <input type="text" readonly value="https://itqan-app.web.app/view?room=proyek-konstruksi-01" class="w-full bg-darkslate border border-borderdark rounded p-2 text-xs text-slate-300">
+                        <button onclick="alert('Tautan view-only disalin!')" class="bg-slate-700 text-white px-3 py-2 rounded text-xs font-semibold hover:bg-slate-600">Salin</button>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 italic">Seluruh anggota tim yang membuka tautan kolaborasi dapat memperbarui data secara real-time.</p>
+            </div>
+            <div class="flex justify-end pt-3 border-t border-borderdark">
+                <button onclick="closeShareModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-carddark border-t border-borderdark text-center py-4 text-xs text-slate-400 mt-auto">
+        Aplikasi Itqan &copy; 2026 – Daftar Periksa Pekerjaan Konstruksi & Kolaborasi Real-Time
+    </footer>
+
+    <!-- JavaScript Aplikasi -->
+    <script>
+        // Data Awal Pekerjaan (Sample)
+        let tasks = [
+            { id: "PRJ-001", name: "Pekerjaan Persiapan & Pembersihan Lahan", pic: "Ahmad Fauzi", start: "2026-03-01", end: "2026-03-05", progress: 100, status: "Selesai", desc: "Area bersih dan siap" },
+            { id: "PRJ-002", name: "Pekerjaan Galian Tanah & Pondasi", pic: "Budi Santoso", start: "2026-03-06", end: "2026-03-15", progress: 100, status: "Selesai", desc: "Pondasi utama selesai" },
+            { id: "PRJ-003", name: "Pemasangan Struktur Beton Bertulang", pic: "Ahmad Fauzi", start: "2026-03-16", end: "2026-04-05", progress: 75, status: "Belum Selesai", desc: "Lantai 1 dan 2 terpasang" },
+            { id: "PRJ-004", name: "Pemasangan Dinding Bata & Plesteran", pic: "Dewi Lestari", start: "2026-04-01", end: "2026-04-20", progress: 40, status: "Belum Selesai", desc: "Proses pengerjaan sayap timur" },
+            { id: "PRJ-005", name: "Instalasi Rangka Atap & Genteng", pic: "Joko Widodo", start: "2026-04-21", end: "2026-05-05", progress: 0, status: "Belum Selesai", desc: "Menunggu material tiba" }
+        ];
+
+        function renderTasks(dataToRender = tasks) {
+            const tbody = document.getElementById("taskTableBody");
+            tbody.innerHTML = "";
+
+            let total = dataToRender.length;
+            let doneCount = 0;
+            let progressSum = 0;
+
+            dataToRender.forEach((task, index) => {
+                if (task.status === "Selesai") doneCount++;
+                progressSum += Number(task.progress);
+
+                // Warna Baris: Hijau jika Selesai, Kuning jika Belum Selesai
+                let rowBgClass = task.status === "Selesai" ? "bg-emerald-950/40 hover:bg-emerald-900/40 border-l-4 border-emerald-500" : "bg-amber-950/30 hover:bg-amber-900/30 border-l-4 border-amber-400";
+                let badgeClass = task.status === "Selesai" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+
+                let tr = document.createElement("tr");
+                tr.className = `${rowBgClass} transition duration-150`;
+                tr.innerHTML = `
+                    <td class="p-3 text-center cursor-grab text-slate-400 hover:text-white"><i class="fa-solid fa-grip-vertical"></i></td>
+                    <td class="p-3 font-mono text-xs text-slate-300">${task.id}</td>
+                    <td class="p-3 font-medium text-white">${task.name}</td>
+                    <td class="p-3 text-slate-300">${task.pic}</td>
+                    <td class="p-3 text-center text-xs text-slate-400">${task.start}</td>
+                    <td class="p-3 text-center text-xs text-slate-400">${task.end}</td>
+                    <td class="p-3 text-center font-semibold text-slate-200">${task.progress}%</td>
+                    <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${task.status}</span></td>
+                    <td class="p-3 text-xs text-slate-400">${task.desc}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editTask(${index})" class="text-sky-400 hover:text-sky-300 p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteTask(${index})" class="text-rose-400 hover:text-rose-300 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Statistik Dashboard
+            document.getElementById("statTotal").innerText = total;
+            document.getElementById("statDone").innerText = doneCount;
+            document.getElementById("statPending").innerText = total - doneCount;
+            let avg = total > 0 ? Math.round(progressSum / total) : 0;
+            document.getElementById("statProgress").innerText = avg + "%";
+        }
+
+        // Inisialisasi Drag & Drop (Geser Urutan)
+        document.addEventListener("DOMContentLoaded", () => {
+            renderTasks();
+            const el = document.getElementById("taskTableBody");
+            Sortable.create(el, {
+                handle: '.fa-grip-vertical',
+                animation: 150,
+                onEnd: function (evt) {
+                    const movedItem = tasks.splice(evt.oldIndex, 1)[0];
+                    tasks.splice(evt.newIndex, 0, movedItem);
+                    renderTasks();
+                }
+            });
+        });
+
+        // Fitur Pencarian Pekerjaan
+        function filterTasks() {
+            let keyword = document.getElementById("searchInput").value.toLowerCase();
+            let filtered = tasks.filter(t => t.name.toLowerCase().includes(keyword) || t.pic.toLowerCase().includes(keyword) || t.id.toLowerCase().includes(keyword));
+            renderTasks(filtered);
+        }
+
+        // Modal Handler
+        function openAddModal() {
+            document.getElementById("modalTitle").innerText = "Tambah Pekerjaan Baru";
+            document.getElementById("taskIndex").value = "";
+            document.getElementById("taskForm").reset();
+            document.getElementById("taskModal").classList.remove("hidden");
+        }
+
+        function editTask(index) {
+            let t = tasks[index];
+            document.getElementById("modalTitle").innerText = "Edit Pekerjaan";
+            document.getElementById("taskIndex").value = index;
+            document.getElementById("taskId").value = t.id;
+            document.getElementById("taskPic").value = t.pic;
+            document.getElementById("taskName").value = t.name;
+            document.getElementById("taskStart").value = t.start;
+            document.getElementById("taskEnd").value = t.end;
+            document.getElementById("taskProgress").value = t.progress;
+            document.getElementById("taskStatus").value = t.status;
+            document.getElementById("taskDesc").value = t.desc;
+            document.getElementById("taskModal").classList.remove("hidden");
+        }
+
+        function closeModal() {
+            document.getElementById("taskModal").classList.add("hidden");
+        }
+
+        function autoSetStatus() {
+            let prog = parseInt(document.getElementById("taskProgress").value);
+            let statusSelect = document.getElementById("taskStatus");
+            if (prog >= 100) {
+                statusSelect.value = "Selesai";
+            } else {
+                statusSelect.value = "Belum Selesai";
+            }
+        }
+
+        function saveTask(event) {
+            event.preventDefault();
+            let index = document.getElementById("taskIndex").value;
+            let newItem = {
+                id: document.getElementById("taskId").value,
+                name: document.getElementById("taskName").value,
+                pic: document.getElementById("taskPic").value,
+                start: document.getElementById("taskStart").value,
+                end: document.getElementById("taskEnd").value,
+                progress: parseInt(document.getElementById("taskProgress").value),
+                status: document.getElementById("taskStatus").value,
+                desc: document.getElementById("taskDesc").value
+            };
+
+            if (index === "") {
+                tasks.push(newItem);
+            } else {
+                tasks[index] = newItem;
+            }
+
+            closeModal();
             renderTasks();
         }
-    });
-});
 
-// Fitur Pencarian Pekerjaan
-function filterTasks() {
-    let keyword = document.getElementById("searchInput").value.toLowerCase();
-    let filtered = tasks.filter(t => t.name.toLowerCase().includes(keyword) || t.pic.toLowerCase().includes(keyword) || t.id.toLowerCase().includes(keyword));
-    renderTasks(filtered);
-}
+        function deleteTask(index) {
+            if (confirm("Apakah Anda yakin ingin menghapus item pekerjaan ini?")) {
+                tasks.splice(index, 1);
+                renderTasks();
+            }
+        }
 
-// Modal Handler
-function openAddModal() {
-    document.getElementById("modalTitle").innerText = "Tambah Pekerjaan Baru";
-    document.getElementById("taskIndex").value = "";
-    document.getElementById("taskForm").reset();
-    document.getElementById("taskModal").classList.remove("hidden");
-}
+        // Simulasi Impor Excel
+        function importExcel(event) {
+            let file = event.target.files[0];
+            if (file) {
+                alert("Berkas '" + file.name + "' berhasil diimpor! Sistem otomatis memperbarui daftar periksa.");
+                // Dummy penambahan data simulasi hasil impor excel
+                tasks.push({
+                    id: "PRJ-006",
+                    name: "Instalasi Saluran Air & Sanitasi (Impor)",
+                    pic: "Budi Santoso",
+                    start: "2026-04-10",
+                    end: "2026-04-25",
+                    progress: 20,
+                    status: "Belum Selesai",
+                    desc: "Dari berkas Excel eksternal"
+                });
+                renderTasks();
+            }
+        }
 
-function editTask(index) {
-    let t = tasks[index];
-    document.getElementById("modalTitle").innerText = "Edit Pekerjaan";
-    document.getElementById("taskIndex").value = index;
-    document.getElementById("taskId").value = t.id;
-    document.getElementById("taskPic").value = t.pic;
-    document.getElementById("taskName").value = t.name;
-    document.getElementById("taskStart").value = t.start;
-    document.getElementById("taskEnd").value = t.end;
-    document.getElementById("taskProgress").value = t.progress;
-    document.getElementById("taskStatus").value = t.status;
-    document.getElementById("taskDesc").value = t.desc;
-    document.getElementById("taskModal").classList.remove("hidden");
-}
+        // Export ke Google Sheets
+        function exportToGoogleSheets() {
+            alert("Data berhasil diekspor langsung ke Google Sheets Anda!");
+        }
 
-function closeModal() {
-    document.getElementById("taskModal").classList.add("hidden");
-}
+        // Sinkronisasi ke Google Kalender
+        function syncToGoogleCalendar() {
+            alert("Tenggat waktu pekerjaan berhasil disinkronkan ke Google Kalender!");
+        }
 
-function autoSetStatus() {
-    let prog = parseInt(document.getElementById("taskProgress").value);
-    let statusSelect = document.getElementById("taskStatus");
-    if (prog >= 100) {
-        statusSelect.value = "Selesai";
-    } else {
-        statusSelect.value = "Belum Selesai";
-    }
-}
-
-function saveTask(event) {
-    event.preventDefault();
-    let index = document.getElementById("taskIndex").value;
-    let newItem = {
-        id: document.getElementById("taskId").value,
-        name: document.getElementById("taskName").value,
-        pic: document.getElementById("taskPic").value,
-        start: document.getElementById("taskStart").value,
-        end: document.getElementById("taskEnd").value,
-        progress: parseInt(document.getElementById("taskProgress").value),
-        status: document.getElementById("taskStatus").value,
-        desc: document.getElementById("taskDesc").value
-    };
-
-    if (index === "") {
-        tasks.push(newItem);
-    } else {
-        tasks[index] = newItem;
-    }
-
-    saveToLocalStorage(); // Simpan penambahan/perubahan data ke localStorage
-    closeModal();
-    renderTasks();
-}
-
-function deleteTask(index) {
-    if (confirm("Apakah Anda yakin ingin menghapus item pekerjaan ini?")) {
-        tasks.splice(index, 1);
-        saveToLocalStorage(); // Simpan penghapusan ke localStorage
-        renderTasks();
-    }
-}
-
-// Simulasi Impor Excel
-function importExcel(event) {
-    let file = event.target.files[0];
-    if (file) {
-        alert("Berkas '" + file.name + "' berhasil diimpor! Sistem otomatis memperbarui daftar periksa.");
-        // Dummy penambahan data simulasi hasil impor excel
-        tasks.push({
-            id: "PRJ-006",
-            name: "Instalasi Saluran Air & Sanitasi (Impor)",
-            pic: "Budi Santoso",
-            start: "2026-04-10",
-            end: "2026-04-25",
-            progress: 20,
-            status: "Belum Selesai",
-            desc: "Dari berkas Excel eksternal"
-        });
-        
-        saveToLocalStorage(); // Simpan hasil impor ke localStorage
-        renderTasks();
-    }
-}
-
-// Export ke Google Sheets
-function exportToGoogleSheets() {
-    alert("Data berhasil diekspor langsung ke Google Sheets Anda!");
-}
-
-// Sinkronisasi ke Google Kalender
-function syncToGoogleCalendar() {
-    alert("Tenggat waktu pekerjaan berhasil disinkronkan ke Google Kalender!");
-}
-
-// Modal Berbagi Tautan
-function openShareModal() {
-    document.getElementById("shareModal").classList.remove("hidden");
-}
-function closeShareModal() {
-    document.getElementById("shareModal").classList.add("hidden");
-}
+        // Modal Berbagi Tautan
+        function openShareModal() {
+            document.getElementById("shareModal").classList.remove("hidden");
+        }
+        function closeShareModal() {
+            document.getElementById("shareModal").classList.add("hidden");
+        }
+    </script>
+</body>
+</html>
